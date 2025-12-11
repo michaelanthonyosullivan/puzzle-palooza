@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import farmyardImage from "@/assets/farmyard.jpg";
 import Celebration from "./Celebration";
+import { PuzzleOption } from "./PuzzleSelector";
 
 interface PuzzlePiece {
   id: number;
@@ -18,7 +18,12 @@ const ROWS = 2;
 const COLS = 5;
 const SNAP_THRESHOLD = 30;
 
-const PuzzleGame = () => {
+interface PuzzleGameProps {
+  puzzle: PuzzleOption;
+  onBack: () => void;
+}
+
+const PuzzleGame = ({ puzzle, onBack }: PuzzleGameProps) => {
   const [gameState, setGameState] = useState<"start" | "playing" | "complete">("start");
   const [pieces, setPieces] = useState<PuzzlePiece[]>([]);
   const [draggingPiece, setDraggingPiece] = useState<number | null>(null);
@@ -101,6 +106,10 @@ const PuzzleGame = () => {
   const handlePlayAgain = () => {
     setGameState("start");
     setPieces([]);
+  };
+
+  const handleBackToMenu = () => {
+    onBack();
   };
 
   const getEventPosition = (e: React.MouseEvent | React.TouchEvent) => {
@@ -212,7 +221,7 @@ const PuzzleGame = () => {
         animate={{ y: 0, opacity: 1 }}
         style={{ textShadow: "2px 2px 4px hsla(0, 0%, 100%, 0.5)" }}
       >
-        🐄 Farmyard Puzzle 🐑
+        {puzzle.emoji} {puzzle.name} Puzzle {puzzle.emoji}
       </motion.h1>
 
       {gameState === "playing" && (
@@ -246,8 +255,8 @@ const PuzzleGame = () => {
         >
           {gameState === "start" && (
             <motion.img
-              src={farmyardImage}
-              alt="Farmyard scene with animals"
+              src={puzzle.image}
+              alt={puzzle.name}
               className="w-full h-full object-cover"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -293,7 +302,7 @@ const PuzzleGame = () => {
               left: piece.currentX,
               top: piece.currentY,
               zIndex: draggingPiece === piece.id ? 100 : piece.isPlaced ? 1 : 10,
-              backgroundImage: `url(${farmyardImage})`,
+              backgroundImage: `url(${puzzle.image})`,
               backgroundSize: `${dimensions.width}px ${dimensions.height}px`,
               backgroundPosition: `-${piece.col * pieceSize.width}px -${piece.row * pieceSize.height}px`,
               touchAction: "none",
@@ -316,17 +325,35 @@ const PuzzleGame = () => {
       </div>
 
       {gameState === "start" && (
-        <motion.button
-          className="go-button mt-8"
-          onClick={handleStart}
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95, y: 4 }}
-        >
-          Go! 🚀
-        </motion.button>
+        <div className="flex gap-4 mt-8">
+          <motion.button
+            className="px-6 py-3 rounded-full font-display text-lg font-bold transition-all"
+            onClick={handleBackToMenu}
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            style={{
+              background: "hsl(var(--muted))",
+              color: "hsl(var(--muted-foreground))",
+              boxShadow: "0 4px 15px hsla(0, 0%, 0%, 0.1)",
+            }}
+          >
+            ← Back
+          </motion.button>
+          <motion.button
+            className="go-button"
+            onClick={handleStart}
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95, y: 4 }}
+          >
+            Go! 🚀
+          </motion.button>
+        </div>
       )}
 
       <Celebration show={gameState === "complete"} onPlayAgain={handlePlayAgain} />

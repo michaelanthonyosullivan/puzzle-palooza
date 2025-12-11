@@ -1,14 +1,22 @@
+import { useState } from "react";
 import PuzzleGame from "@/components/PuzzleGame";
+import PuzzleSelector, { PuzzleOption } from "@/components/PuzzleSelector";
 import { Helmet } from "react-helmet";
 
 const Index = () => {
+  const [selectedPuzzle, setSelectedPuzzle] = useState<PuzzleOption | null>(null);
+
   return (
     <>
       <Helmet>
-        <title>Farmyard Puzzle - Fun Jigsaw Game for Kids</title>
-        <meta name="description" content="A fun and colorful farmyard jigsaw puzzle game for children. Drag and drop pieces to complete the picture!" />
+        <title>Jigsaw Puzzles - Fun Games for Kids</title>
+        <meta name="description" content="Fun and colorful jigsaw puzzle games for children. Choose from farmyard, playground, dinosaurs and more! Drag and drop pieces to complete the picture!" />
       </Helmet>
-      <PuzzleGame />
+      {selectedPuzzle ? (
+        <PuzzleGame puzzle={selectedPuzzle} onBack={() => setSelectedPuzzle(null)} />
+      ) : (
+        <PuzzleSelector onSelect={setSelectedPuzzle} />
+      )}
     </>
   );
 };
