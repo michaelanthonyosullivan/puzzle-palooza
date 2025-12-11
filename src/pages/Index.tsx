@@ -1,13 +1,15 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import PuzzleGame from "@/components/PuzzleGame";
+import { Helmet } from "react-helmet";
 
 const Index = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <>
+      <Helmet>
+        <title>Farmyard Puzzle - Fun Jigsaw Game for Kids</title>
+        <meta name="description" content="A fun and colorful farmyard jigsaw puzzle game for children. Drag and drop pieces to complete the picture!" />
+      </Helmet>
+      <PuzzleGame />
+    </>
   );
 };
 
