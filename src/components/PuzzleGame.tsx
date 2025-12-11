@@ -264,6 +264,16 @@ const PuzzleGame = ({ puzzle, onBack }: PuzzleGameProps) => {
             />
           )}
 
+          {/* Onionskin template - shows faded original image as guide */}
+          {gameState === "playing" && (
+            <img
+              src={puzzle.image}
+              alt="Guide"
+              className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+              style={{ opacity: 0.2 }}
+            />
+          )}
+
           {/* Grid overlay for placement hints */}
           {gameState === "playing" && (
             <div className="absolute inset-0 pointer-events-none">
