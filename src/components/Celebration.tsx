@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useCelebrationSound } from "@/hooks/useCelebrationSound";
 
 interface CelebrationProps {
   show: boolean;
@@ -9,6 +10,7 @@ interface CelebrationProps {
 const Celebration = ({ show, onPlayAgain }: CelebrationProps) => {
   const [balloons, setBalloons] = useState<{ id: number; x: number; color: string }[]>([]);
   const [stars, setStars] = useState<{ id: number; x: number; y: number; delay: number }[]>([]);
+  const { playTadah } = useCelebrationSound();
 
   const balloonColors = [
     "hsl(0 70% 55%)",      // Red
@@ -21,6 +23,9 @@ const Celebration = ({ show, onPlayAgain }: CelebrationProps) => {
 
   useEffect(() => {
     if (show) {
+      // Play celebratory sound
+      playTadah();
+      
       // Generate balloons
       const newBalloons = Array.from({ length: 15 }, (_, i) => ({
         id: i,
@@ -38,7 +43,7 @@ const Celebration = ({ show, onPlayAgain }: CelebrationProps) => {
       }));
       setStars(newStars);
     }
-  }, [show]);
+  }, [show, playTadah]);
 
   return (
     <AnimatePresence>
