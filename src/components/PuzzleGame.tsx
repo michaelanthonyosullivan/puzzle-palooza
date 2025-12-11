@@ -31,22 +31,33 @@ const PuzzleGame = ({ puzzle, onBack }: PuzzleGameProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [pieceSize, setPieceSize] = useState({ width: 0, height: 0 });
+  const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
 
-  // Calculate dimensions based on container size
+  // Load image and get its natural aspect ratio
   useEffect(() => {
+    const img = new Image();
+    img.onload = () => {
+      setImageAspectRatio(img.naturalWidth / img.naturalHeight);
+    };
+    img.src = puzzle.image;
+  }, [puzzle.image]);
+
+  // Calculate dimensions based on container size and actual image aspect ratio
+  useEffect(() => {
+    if (!imageAspectRatio) return;
+
     const updateDimensions = () => {
       if (containerRef.current) {
         const maxWidth = Math.min(window.innerWidth - 32, 700);
         const maxHeight = window.innerHeight * 0.5;
-        const aspectRatio = 1148 / 640; // Original image aspect ratio
         
         let width = maxWidth;
-        let height = width / aspectRatio;
+        let height = width / imageAspectRatio;
         
         // If height is too tall, constrain by height
         if (height > maxHeight) {
           height = maxHeight;
-          width = height * aspectRatio;
+          width = height * imageAspectRatio;
         }
         
         setDimensions({ width, height });
@@ -57,7 +68,7 @@ const PuzzleGame = ({ puzzle, onBack }: PuzzleGameProps) => {
     updateDimensions();
     window.addEventListener("resize", updateDimensions);
     return () => window.removeEventListener("resize", updateDimensions);
-  }, []);
+  }, [imageAspectRatio]);
 
   const initializePuzzle = useCallback(() => {
     const newPieces: PuzzlePiece[] = [];
