@@ -1,8 +1,13 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import farmyardImage from "@/assets/farmyard.jpg";
 import playgroundImage from "@/assets/playground.jpg";
 import dinosaursImage from "@/assets/dinosaurs.jpg";
 import harbourImage from "@/assets/harbour.jpg";
+import fireEngineImage from "@/assets/fire-engine.jpg";
+import steamTrainImage from "@/assets/steam-train.jpg";
+import towerBridgeImage from "@/assets/tower-bridge.jpg";
+import wildHorsesImage from "@/assets/wild-horses.jpg";
 
 export interface PuzzleOption {
   id: string;
@@ -11,18 +16,30 @@ export interface PuzzleOption {
   image: string;
 }
 
-export const puzzles: PuzzleOption[] = [
+const puzzlesPage1: PuzzleOption[] = [
   { id: "farmyard", name: "Farmyard", emoji: "🐄", image: farmyardImage },
   { id: "playground", name: "Playground", emoji: "🛝", image: playgroundImage },
   { id: "dinosaurs", name: "Dinosaurs", emoji: "🦕", image: dinosaursImage },
   { id: "harbour", name: "Harbour", emoji: "⛵", image: harbourImage },
 ];
 
+const puzzlesPage2: PuzzleOption[] = [
+  { id: "fire-engine", name: "Fire Engine", emoji: "🚒", image: fireEngineImage },
+  { id: "steam-train", name: "Steam Train", emoji: "🚂", image: steamTrainImage },
+  { id: "tower-bridge", name: "Tower Bridge", emoji: "🌉", image: towerBridgeImage },
+  { id: "wild-horses", name: "Wild Horses", emoji: "🐴", image: wildHorsesImage },
+];
+
+export const puzzles: PuzzleOption[] = [...puzzlesPage1, ...puzzlesPage2];
+
 interface PuzzleSelectorProps {
   onSelect: (puzzle: PuzzleOption) => void;
 }
 
 const PuzzleSelector = ({ onSelect }: PuzzleSelectorProps) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const currentPuzzles = currentPage === 1 ? puzzlesPage1 : puzzlesPage2;
+
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center p-4 md:p-8"
@@ -47,7 +64,7 @@ const PuzzleSelector = ({ onSelect }: PuzzleSelectorProps) => {
       </motion.p>
 
       <div className="grid grid-cols-2 gap-4 md:gap-6 max-w-2xl">
-        {puzzles.map((puzzle, index) => (
+        {currentPuzzles.map((puzzle, index) => (
           <motion.button
             key={puzzle.id}
             onClick={() => onSelect(puzzle)}
@@ -78,6 +95,33 @@ const PuzzleSelector = ({ onSelect }: PuzzleSelectorProps) => {
             </div>
           </motion.button>
         ))}
+      </div>
+
+      <div className="flex items-center gap-4 mt-8">
+        <motion.button
+          onClick={() => setCurrentPage(1)}
+          className={`px-6 py-3 rounded-full font-display text-lg font-bold transition-all ${
+            currentPage === 1
+              ? "bg-primary text-primary-foreground shadow-lg"
+              : "bg-white/50 text-foreground hover:bg-white/80"
+          }`}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          Page 1
+        </motion.button>
+        <motion.button
+          onClick={() => setCurrentPage(2)}
+          className={`px-6 py-3 rounded-full font-display text-lg font-bold transition-all ${
+            currentPage === 2
+              ? "bg-primary text-primary-foreground shadow-lg"
+              : "bg-white/50 text-foreground hover:bg-white/80"
+          }`}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          Page 2
+        </motion.button>
       </div>
     </div>
   );
