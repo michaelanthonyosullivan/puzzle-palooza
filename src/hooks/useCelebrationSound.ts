@@ -1,20 +1,32 @@
 import { useCallback, useRef } from 'react';
 
-export const useCelebrationSound = () => {
-  const audioContextRef = useRef<AudioContext | null>(null);
+// Single shared AudioContext instance
+let sharedAudioContext: AudioContext | null = null;
 
-  const getAudioContext = useCallback(() => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    return audioContextRef.current;
-  }, []);
+const getSharedAudioContext = (): AudioContext => {
+  if (!sharedAudioContext) {
+    sharedAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+  return sharedAudioContext;
+};
+
+export const useCelebrationSound = () => {
+  const hasPlayedRef = useRef(false);
 
   const playTadah = useCallback(async () => {
+    // Prevent double-play
+    if (hasPlayedRef.current) return;
+    hasPlayedRef.current = true;
+    
+    // Reset after a short delay
+    setTimeout(() => {
+      hasPlayedRef.current = false;
+    }, 1000);
+
     try {
-      const audioContext = getAudioContext();
+      const audioContext = getSharedAudioContext();
       
-      // Resume AudioContext if suspended (required for mobile)
+      // Resume AudioContext if suspended (required for iOS/mobile)
       if (audioContext.state === 'suspended') {
         await audioContext.resume();
       }
@@ -52,7 +64,27 @@ export const useCelebrationSound = () => {
     } catch (error) {
       console.log('Audio playback failed:', error);
     }
-  }, [getAudioContext]);
+  }, []);
 
   return { playTadah };
+};
+
+// Function to unlock audio on first user interaction (call this on touch/click)
+export const unlockAudio = async () => {
+  try {
+    const audioContext = getSharedAudioContext();
+    if (audioContext.state === 'suspended') {
+      await audioContext.resume();
+    }
+    // Play a silent sound to fully unlock on iOS
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    gainNode.gain.value = 0;
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.001);
+  } catch (e) {
+    // Ignore errors
+  }
 };
