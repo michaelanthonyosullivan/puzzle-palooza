@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import Celebration from "./Celebration";
 import { PuzzleOption } from "./PuzzleSelector";
+import { unlockAudio } from "@/hooks/useCelebrationSound";
 
 interface PuzzlePiece {
   id: number;
@@ -111,6 +112,8 @@ const PuzzleGame = ({ puzzle, onBack }: PuzzleGameProps) => {
   }, [dimensions]);
 
   const handleStart = () => {
+    // Unlock audio on iOS/mobile - must happen in user interaction handler
+    unlockAudio();
     initializePuzzle();
   };
 
