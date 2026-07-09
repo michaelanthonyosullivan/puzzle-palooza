@@ -32,6 +32,12 @@ const puzzlesPage2: PuzzleOption[] = [
 
 export const puzzles: PuzzleOption[] = [...puzzlesPage1, ...puzzlesPage2];
 
+// Returns the next puzzle in the list, wrapping around to the first.
+export const getNextPuzzle = (current: PuzzleOption): PuzzleOption => {
+  const index = puzzles.findIndex((p) => p.id === current.id);
+  return puzzles[(index + 1) % puzzles.length];
+};
+
 interface PuzzleSelectorProps {
   onSelect: (puzzle: PuzzleOption) => void;
 }

@@ -5,11 +5,15 @@ import { useCelebrationSound } from "@/hooks/useCelebrationSound";
 interface CelebrationProps {
   show: boolean;
   onPlayAgain: () => void;
+  onNext: () => void;
+  time: number;
+  bestTime: number | null;
+  stars: number;
 }
 
-const Celebration = ({ show, onPlayAgain }: CelebrationProps) => {
+const Celebration = ({ show, onPlayAgain, onNext, time, bestTime, stars }: CelebrationProps) => {
   const [balloons, setBalloons] = useState<{ id: number; x: number; color: string }[]>([]);
-  const [stars, setStars] = useState<{ id: number; x: number; y: number; delay: number }[]>([]);
+  const [starParticles, setStarParticles] = useState<{ id: number; x: number; y: number; delay: number }[]>([]);
   const { playTadah } = useCelebrationSound();
 
   const balloonColors = [
@@ -41,7 +45,7 @@ const Celebration = ({ show, onPlayAgain }: CelebrationProps) => {
         y: Math.random() * 100,
         delay: Math.random() * 0.5,
       }));
-      setStars(newStars);
+      setStarParticles(newStars);
     }
   }, [show, playTadah]);
 
@@ -83,7 +87,7 @@ const Celebration = ({ show, onPlayAgain }: CelebrationProps) => {
           ))}
 
           {/* Sparkling Stars */}
-          {stars.map((star) => (
+          {starParticles.map((star) => (
             <motion.div
               key={star.id}
               className="absolute"
@@ -175,6 +179,34 @@ const Celebration = ({ show, onPlayAgain }: CelebrationProps) => {
             </motion.h1>
 
             <motion.div
+              className="flex flex-col items-center gap-2 mb-8"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
+              <div className="flex gap-2 text-4xl md:text-5xl" aria-label={`${stars} out of 3 stars`}>
+                {[0, 1, 2].map((i) => (
+                  <motion.span
+                    key={i}
+                    animate={{ scale: i < stars ? [0, 1.3, 1] : 1, rotate: i < stars ? [0, 20, 0] : 0 }}
+                    transition={{ delay: 0.6 + i * 0.15, duration: 0.4 }}
+                    style={{ opacity: i < stars ? 1 : 0.25, filter: i < stars ? "none" : "grayscale(1)" }}
+                  >
+                    ⭐
+                  </motion.span>
+                ))}
+              </div>
+              <div className="font-display text-2xl md:text-3xl font-bold text-white drop-shadow-lg">
+                Time: {Math.floor(time / 60)}:{String(time % 60).padStart(2, "0")}
+              </div>
+              <div className="font-display text-lg md:text-xl text-white/90">
+                {bestTime !== null
+                  ? `Best: ${Math.floor(bestTime / 60)}:${String(bestTime % 60).padStart(2, "0")}`
+                  : "First completion!"}
+              </div>
+            </motion.div>
+
+            <motion.div
               className="flex justify-center gap-4 mb-8"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -199,17 +231,30 @@ const Celebration = ({ show, onPlayAgain }: CelebrationProps) => {
               ))}
             </motion.div>
 
-            <motion.button
-              className="go-button text-xl md:text-2xl"
-              onClick={onPlayAgain}
+            <motion.div
+              className="flex flex-wrap justify-center gap-4"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
             >
-              Play Again! 🔄
-            </motion.button>
+              <motion.button
+                className="go-button text-xl md:text-2xl"
+                onClick={onPlayAgain}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Play Again! 🔄
+              </motion.button>
+              <motion.button
+                className="go-button text-xl md:text-2xl"
+                onClick={onNext}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                style={{ background: "hsl(200 80% 60%)" }}
+              >
+                Next Puzzle! ➡️
+              </motion.button>
+            </motion.div>
           </motion.div>
         </motion.div>
       )}

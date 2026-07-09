@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import Celebration from "./Celebration";
 import { PuzzleOption } from "./PuzzleSelector";
-import { unlockAudio } from "@/hooks/useCelebrationSound";
+import { unlockAudio, playSnap } from "@/hooks/useCelebrationSound";
 
 interface PuzzlePiece {
   id: number;
@@ -15,16 +15,43 @@ interface PuzzlePiece {
   col: number;
 }
 
-const ROWS = 2;
-const COLS = 5;
-const SNAP_THRESHOLD = 30;
+interface Difficulty {
+  id: string;
+  name: string;
+  rows: number;
+  cols: number;
+}
+
+const DIFFICULTIES: Difficulty[] = [
+  { id: "easy", name: "Easy", rows: 2, cols: 3 },
+  { id: "medium", name: "Medium", rows: 3, cols: 4 },
+  { id: "hard", name: "Hard", rows: 4, cols: 5 },
+];
+
+const SNAP_THRESHOLD_RATIO = 0.4;
+
+// Format seconds as M:SS
+const formatTime = (seconds: number): string => {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+};
+
+// Award 1-3 stars based on time per piece (easy/medium/hard have different piece counts)
+const getStars = (seconds: number, pieceCount: number): number => {
+  const perPiece = seconds / pieceCount;
+  if (perPiece <= 4) return 3;
+  if (perPiece <= 8) return 2;
+  return 1;
+};
 
 interface PuzzleGameProps {
   puzzle: PuzzleOption;
   onBack: () => void;
+  onNext: () => void;
 }
 
-const PuzzleGame = ({ puzzle, onBack }: PuzzleGameProps) => {
+const PuzzleGame = ({ puzzle, onBack, onNext }: PuzzleGameProps) => {
   const [gameState, setGameState] = useState<"start" | "playing" | "complete">("start");
   const [pieces, setPieces] = useState<PuzzlePiece[]>([]);
   const [draggingPiece, setDraggingPiece] = useState<number | null>(null);
@@ -33,6 +60,15 @@ const PuzzleGame = ({ puzzle, onBack }: PuzzleGameProps) => {
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [pieceSize, setPieceSize] = useState({ width: 0, height: 0 });
   const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
+  const [difficulty, setDifficulty] = useState<Difficulty>(DIFFICULTIES[0]);
+  const [elapsed, setElapsed] = useState(0);
+  const [bestTime, setBestTime] = useState<number | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+  const timerIntervalRef = useRef<number | null>(null);
+
+  const ROWS = difficulty.rows;
+  const COLS = difficulty.cols;
+  const SNAP_THRESHOLD = Math.min(pieceSize.width, pieceSize.height) * SNAP_THRESHOLD_RATIO;
 
   // Load image and get its natural aspect ratio
   useEffect(() => {
@@ -69,7 +105,7 @@ const PuzzleGame = ({ puzzle, onBack }: PuzzleGameProps) => {
     updateDimensions();
     window.addEventListener("resize", updateDimensions);
     return () => window.removeEventListener("resize", updateDimensions);
-  }, [imageAspectRatio]);
+  }, [imageAspectRatio, ROWS, COLS]);
 
   const initializePuzzle = useCallback(() => {
     const newPieces: PuzzlePiece[] = [];
@@ -109,21 +145,55 @@ const PuzzleGame = ({ puzzle, onBack }: PuzzleGameProps) => {
 
     setPieces(newPieces);
     setGameState("playing");
-  }, [dimensions]);
+  }, [dimensions, difficulty]);
 
-  const handleStart = () => {
-    // Unlock audio on iOS/mobile - must happen in user interaction handler
-    unlockAudio();
-    initializePuzzle();
-  };
+  // Load best time for this puzzle from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem(`puzzle-best-${puzzle.id}`);
+    setBestTime(stored ? Number(stored) : null);
+  }, [puzzle.id]);
 
-  const handlePlayAgain = () => {
-    setGameState("start");
-    setPieces([]);
-  };
+  const stopTimer = useCallback(() => {
+    if (timerIntervalRef.current !== null) {
+      window.clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+  }, []);
+
+  const startTimer = useCallback(() => {
+    startTimeRef.current = Date.now();
+    setElapsed(0);
+    stopTimer();
+    timerIntervalRef.current = window.setInterval(() => {
+      if (startTimeRef.current !== null) {
+        setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
+      }
+    }, 1000);
+  }, [stopTimer]);
+
+  useEffect(() => {
+    return () => stopTimer();
+  }, [stopTimer]);
+    const handleStart = () => {
+      // Unlock audio on iOS/mobile - must happen in user interaction handler
+      unlockAudio();
+      startTimer();
+      initializePuzzle();
+    };
+
+    const handlePlayAgain = () => {
+      setGameState("start");
+      setPieces([]);
+      stopTimer();
+      setElapsed(0);
+    };
 
   const handleBackToMenu = () => {
     onBack();
+  };
+
+  const handleSelectDifficulty = (d: Difficulty) => {
+    setDifficulty(d);
   };
 
   const getEventPosition = (e: React.MouseEvent | React.TouchEvent) => {
@@ -183,6 +253,7 @@ const PuzzleGame = ({ puzzle, onBack }: PuzzleGameProps) => {
         const dy = Math.abs(piece.currentY - piece.correctY);
 
         if (dx < SNAP_THRESHOLD && dy < SNAP_THRESHOLD) {
+          playSnap();
           return {
             ...piece,
             currentX: piece.correctX,
@@ -196,6 +267,19 @@ const PuzzleGame = ({ puzzle, onBack }: PuzzleGameProps) => {
       // Check if puzzle is complete
       const isComplete = updated.every((p) => p.isPlaced);
       if (isComplete) {
+        stopTimer();
+        const finalTime = startTimeRef.current
+          ? Math.floor((Date.now() - startTimeRef.current) / 1000)
+          : elapsed;
+        setElapsed(finalTime);
+        // Save best time (lower is better)
+        setBestTime((prevBest) => {
+          if (prevBest === null || finalTime < prevBest) {
+            localStorage.setItem(`puzzle-best-${puzzle.id}`, String(finalTime));
+            return finalTime;
+          }
+          return prevBest;
+        });
         setTimeout(() => setGameState("complete"), 300);
       }
 
@@ -239,13 +323,30 @@ const PuzzleGame = ({ puzzle, onBack }: PuzzleGameProps) => {
       </motion.h1>
 
       {gameState === "playing" && (
-        <motion.div
-          className="mb-4 font-display text-xl md:text-2xl text-primary font-semibold"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          Pieces placed: {placedCount} / {ROWS * COLS}
-        </motion.div>
+        <div className="flex items-center gap-4 mb-4">
+          <motion.button
+            onClick={handleBackToMenu}
+            className="font-display text-lg font-bold px-5 py-2 rounded-full transition-all"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            style={{
+              background: "hsl(var(--muted))",
+              color: "hsl(var(--muted-foreground))",
+              boxShadow: "0 4px 15px hsla(0, 0%, 0%, 0.1)",
+            }}
+          >
+            ← Menu
+          </motion.button>
+          <motion.div
+            className="font-display text-xl md:text-2xl text-primary font-semibold"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            Pieces placed: {placedCount} / {ROWS * COLS} · ⏱ {formatTime(elapsed)}
+          </motion.div>
+        </div>
       )}
 
       <div
@@ -349,38 +450,65 @@ const PuzzleGame = ({ puzzle, onBack }: PuzzleGameProps) => {
       </div>
 
       {gameState === "start" && (
-        <div className="flex gap-4 mt-8">
-          <motion.button
-            className="px-6 py-3 rounded-full font-display text-lg font-bold transition-all"
-            onClick={handleBackToMenu}
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            style={{
-              background: "hsl(var(--muted))",
-              color: "hsl(var(--muted-foreground))",
-              boxShadow: "0 4px 15px hsla(0, 0%, 0%, 0.1)",
-            }}
-          >
-            ← Back
-          </motion.button>
-          <motion.button
-            className="go-button"
-            onClick={handleStart}
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95, y: 4 }}
-          >
-            Go! 🚀
-          </motion.button>
+        <div className="flex flex-col items-center gap-6 mt-8">
+          <div className="flex items-center gap-3">
+            <span className="font-display text-lg font-bold text-foreground">Difficulty:</span>
+            {DIFFICULTIES.map((d) => (
+              <motion.button
+                key={d.id}
+                onClick={() => handleSelectDifficulty(d)}
+                className={`px-5 py-2 rounded-full font-display text-lg font-bold transition-all ${
+                  difficulty.id === d.id
+                    ? "bg-primary text-primary-foreground shadow-lg"
+                    : "bg-white/50 text-foreground hover:bg-white/80"
+                }`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {d.name}
+              </motion.button>
+            ))}
+          </div>
+          <div className="flex gap-4">
+            <motion.button
+              className="px-6 py-3 rounded-full font-display text-lg font-bold transition-all"
+              onClick={handleBackToMenu}
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              style={{
+                background: "hsl(var(--muted))",
+                color: "hsl(var(--muted-foreground))",
+                boxShadow: "0 4px 15px hsla(0, 0%, 0%, 0.1)",
+              }}
+            >
+              ← Back
+            </motion.button>
+            <motion.button
+              className="go-button"
+              onClick={handleStart}
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95, y: 4 }}
+            >
+              Go! 🚀
+            </motion.button>
+          </div>
         </div>
       )}
 
-      <Celebration show={gameState === "complete"} onPlayAgain={handlePlayAgain} />
+      <Celebration
+        show={gameState === "complete"}
+        onPlayAgain={handlePlayAgain}
+        onNext={onNext}
+        time={elapsed}
+        bestTime={bestTime}
+        stars={getStars(elapsed, ROWS * COLS)}
+      />
     </div>
   );
 };

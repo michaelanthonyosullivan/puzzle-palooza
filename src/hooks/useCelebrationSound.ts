@@ -69,6 +69,36 @@ export const useCelebrationSound = () => {
   return { playTadah };
 };
 
+// Short "click" sound played when a piece snaps into place.
+export const playSnap = async () => {
+  try {
+    const audioContext = getSharedAudioContext();
+    if (audioContext.state === 'suspended') {
+      await audioContext.resume();
+    }
+
+    const now = audioContext.currentTime;
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(880, now);
+    oscillator.frequency.exponentialRampToValueAtTime(440, now + 0.08);
+
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(0.25, now + 0.01);
+    gainNode.gain.linearRampToValueAtTime(0, now + 0.12);
+
+    oscillator.start(now);
+    oscillator.stop(now + 0.13);
+  } catch (e) {
+    // Ignore audio errors
+  }
+};
+
 // Function to unlock audio on first user interaction (call this on touch/click)
 export const unlockAudio = async () => {
   try {

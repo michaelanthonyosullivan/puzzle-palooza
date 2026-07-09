@@ -57,17 +57,16 @@ This project is built with:
 - Vite
 - TypeScript
 - React
-- shadcn-ui
 - Tailwind CSS
+- Framer Motion
+- React Router DOM
 
 ## How can I deploy this project?
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+This is a frontend-only Vite app. Build the production bundle with `npm run build` and serve the `dist/` folder on any static host (e.g. Replit, Netlify, Vercel, GitHub Pages).
 
-## Can I connect a custom domain to my Lovable project?
+## Recent changes
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- Migrated from the Lovable platform to Replit.
+- Removed the unused Supabase integration and shadcn-ui component library; trimmed to a minimal dependency set.
+- Added difficulty levels, snap sound, in-play menu, timer/best-time with star ratings, and a Next Puzzle button.
